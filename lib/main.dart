@@ -74,13 +74,24 @@ class _MyHomePageState extends State<MyHomePage> {
 
   //TODO extract entity
   extractEntity(String text) async {
-    final List<EntityAnnotation> annotations =
-        await entityExtractor.annotateText(text);
+    if (!isModelDownloaded) {
+      await checkAndDownloadModel();
+    }
 
-    if (annotations.isNotEmpty) {
-      result = annotations.map((e) => '${e.entities.map((e) => e.type.name).join(', ')}: ${e.text}').join('\n ');
+    if (isModelDownloaded) {
+      final List<EntityAnnotation> annotations =
+          await entityExtractor.annotateText(text);
+
+      if (annotations.isNotEmpty) {
+        result = annotations
+            .map((e) =>
+                '${e.entities.map((e) => e.type.name).join(', ')}: ${e.text}')
+            .join('\n ');
+      } else {
+        result = "Type text here...";
+      }
     } else {
-      result = "Type text here...";
+      result = "Model not downloaded";
     }
 
     setState(() {
