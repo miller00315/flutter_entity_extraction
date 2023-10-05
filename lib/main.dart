@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-
+import 'package:google_mlkit_entity_extraction/google_mlkit_entity_extraction.dart';
 
 void main() {
   runApp(const MyApp());
@@ -33,33 +32,61 @@ class _MyHomePageState extends State<MyHomePage> {
   TextEditingController textEditingController = TextEditingController();
   String result = 'extracted entities...';
 
+  late EntityExtractor entityExtractor;
+  late EntityExtractorModelManager modelManager;
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
+
+    modelManager = EntityExtractorModelManager();
+
     checkAndDownloadModel();
+  }
+
+  @override
+  void dispose() {
+    textEditingController.dispose();
+    entityExtractor.close();
+
+    super.dispose();
   }
 
   bool isModelDownloaded = false;
   checkAndDownloadModel() async {
-    print("check model start");
+    isModelDownloaded = await modelManager
+        .isModelDownloaded(EntityExtractorLanguage.english.name);
 
-    //TODO if models are loaded then create extractor
+    if (!isModelDownloaded) {
+      isModelDownloaded = await modelManager
+          .downloadModel(EntityExtractorLanguage.english.name);
+    }
 
+    if (isModelDownloaded) {
+      entityExtractor =
+          EntityExtractor(language: EntityExtractorLanguage.english);
+    }
 
-    //TODO download models if not downloaded
-
-
-    //TODO if models are loaded then create extractor
-
-    print("check model end");
+    setState(() {
+      isModelDownloaded;
+    });
   }
 
   //TODO extract entity
   extractEntity(String text) async {
-  }
+    final List<EntityAnnotation> annotations =
+        await entityExtractor.annotateText(text);
 
+    if (annotations.isNotEmpty) {
+      result = annotations.map((e) => '${e.entities.map((e) => e.type.name).join(', ')}: ${e.text}').join('\n ');
+    } else {
+      result = "Type text here...";
+    }
+
+    setState(() {
+      result;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,71 +95,74 @@ class _MyHomePageState extends State<MyHomePage> {
           resizeToAvoidBottomInset: false,
           body: SafeArea(
               child: Container(
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                      image: AssetImage('images/bg.jpg'), fit: BoxFit.cover),
-                ),
-            child:  Column(
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 20, left: 10, right: 10),
-                    height: 50,
-                    child: const Text(
-                      'Entity Extraction',
-                      style: TextStyle(
-                          color: Colors.red, fontWeight: FontWeight.bold,fontSize: 40),
-                    ),
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                  image: AssetImage('images/bg.jpg'), fit: BoxFit.cover),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 20, left: 10, right: 10),
+                  height: 50,
+                  child: const Text(
+                    'Entity Extraction',
+                    style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 40),
                   ),
-                  Container(
-                    margin: const EdgeInsets.only(top: 20, left: 2, right: 2),
-                    width: double.infinity,
-                    height: 250,
-                    child: Card(
-                      color: Colors.white,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextField(
-                          controller: textEditingController,
-                          decoration: const InputDecoration(
-                              fillColor: Colors.white,
-                              hintText: 'Type text here...',
-                              filled: true,
-                              border: InputBorder.none),
-                          style: const TextStyle(color: Colors.black),
-                          maxLines: 100,
-                        ),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(top: 20, left: 2, right: 2),
+                  width: double.infinity,
+                  height: 250,
+                  child: Card(
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: textEditingController,
+                        decoration: const InputDecoration(
+                            fillColor: Colors.white,
+                            hintText: 'Type text here...',
+                            filled: true,
+                            border: InputBorder.none),
+                        style: const TextStyle(color: Colors.black),
+                        maxLines: 100,
                       ),
                     ),
                   ),
-                  Container(
-                    margin: const EdgeInsets.only(top: 15, left: 13, right: 13),
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                          textStyle: const TextStyle(color: Colors.white),
-                          primary: Colors.orange),
-                      child: const Text('Extract Entity'),
-                      onPressed: () {
-                        extractEntity(textEditingController.text);
-                      },
+                ),
+                Container(
+                  margin: const EdgeInsets.only(top: 15, left: 13, right: 13),
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      textStyle: const TextStyle(color: Colors.white),
+                      backgroundColor: Colors.orange,
                     ),
+                    child: const Text('Extract Entity'),
+                    onPressed: () {
+                      extractEntity(textEditingController.text);
+                    },
                   ),
-                  Container(
-                    margin: const EdgeInsets.only(top: 15, left: 10, right: 10),
-                    width: double.infinity,
-                    height: 250,
-                    child: Card(
-                      color: Colors.white,
-                      child: Container(
-                          padding: const EdgeInsets.all(15),
-                          child: Text(
-                            result,
-                            style: const TextStyle(fontSize: 18),
-                          )),
-                    ),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(top: 15, left: 10, right: 10),
+                  width: double.infinity,
+                  height: 250,
+                  child: Card(
+                    color: Colors.white,
+                    child: Container(
+                        padding: const EdgeInsets.all(15),
+                        child: Text(
+                          result,
+                          style: const TextStyle(fontSize: 18),
+                        )),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
           ))),
     );
   }
